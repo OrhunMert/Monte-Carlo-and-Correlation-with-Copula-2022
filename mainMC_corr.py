@@ -32,8 +32,8 @@ def ReadFile(FileName):
    
     --> After the format is set correctly, it assigns the values of the first column of the input excel file 
     (except for the 1st row because it must be the header row) to the matrix_waveLengths variable.
-    -->The size of matrix_waveLengths variable will be ==> Wave Length Number x 1. Their values will be like 350,351....
-    -->The size of matrix_values variable will be ==> WaveLength Number  x DataNumber*2
+    --> The size of matrix_waveLengths variable will be ==> Wave Length Number x 1. Their values will be like 350,351....
+    --> The size of matrix_values variable will be ==> WaveLength Number  x DataNumber*2
     
     """
 
@@ -241,7 +241,9 @@ def calculateMeanStdMC(matrix_Values , matrix_Distr , Data_Number , WaveLength_N
         
         check_mean , check_std = checkIsEqual(matrix_Values[i] , matrix_Values[i+1])
         # matrix_Values[i] = average 1 , matrix_Values[i+1] = standart dev. 1.
+        #is it fixed value or isn't ?
         if check_mean & check_std == False:
+            
             result = drawValues(matrix_Values[i] , matrix_Values[i+1] , drawNumber , DoF = 1 , Type = matrix_Distr[data_count-1])
             result_list.append(result)
             
@@ -253,15 +255,19 @@ def calculateMeanStdMC(matrix_Values , matrix_Distr , Data_Number , WaveLength_N
                 std_matrix[j][data_count-1] = output[0][1]
                 
         elif check_mean & check_std == True:
+            
             result = drawValues(matrix_Values[i,0] , matrix_Values[i+1,0] , drawNumber, DoF = 1 , Type = matrix_Distr[data_count-1])
             temp=[]
+            
             for k in range(WaveLength_Number):
                 temp.append(result)
+            
             temp_np=np.array(temp)
             result_list.append(temp_np)
             
         # We calculated mean and standart dev. of draws(Iteration Number) for each wave length
             for j in range(0,WaveLength_Number):
+                
                 mean_matrix[j][data_count-1] = np.full_like(output[0][0] , matrix_Values[i,0])
                 std_matrix[j][data_count-1] = np.full_like(output[0][1] , matrix_Values[i+1,0])
     
@@ -542,7 +548,7 @@ def resultplot(matrix_WaveLengths , output_matrix):
     #ax2.set_yscale("log")
     plt.show()    
 
-def createDistributionsforCopulas(mc_matrix):
+def createDistributionsforCopulas(mc_matrix , output_matrix):
     
     """
     mc_matrix.size --> (drawNumber , WaveLength_Number)
@@ -616,8 +622,7 @@ def scatterPlotCopulas(x):
     plt.xlabel('Wave Length - value')
     plt.ylabel('Wave Length - value')
     plt.show()
-    
-    
+ 
 def mainMC(drawNum,FileName):
     
     """
@@ -654,8 +659,9 @@ def mainMC(drawNum,FileName):
     else :
         print("row Number has to be even !!!")
    
-    
+    #output2
     result_list , mean_matrix , std_matrix = calculateMeanStdMC(matrix_Values , matrix_Distr , Data_Number, WaveLength_Number)  
+    #output1
     output_matrix, mc_matrix = calculateOutputwithFormulaMC(result_list , Data_Number, WaveLength_Number)
     
     print("\nMonte Carlo is finished\n")
@@ -666,13 +672,14 @@ def mainMC(drawNum,FileName):
 
 # ------- running ------- 
 
-output_matrix , mean_matrix , std_matrix , mc_matrix , matrix_WaveLengths  = mainMC(drawNumber,input_FileName)
+output_matrix , mean_matrix , std_matrix , mc_matrix , matrix_WaveLengths  = mainMC(drawNumber , input_FileName)
 corrMatrix = spectralcorrelation(mc_matrix)
 resultplot(matrix_WaveLengths , output_matrix)
 
-Distributions = createDistributionsforCopulas(mc_matrix)
+Distributions = createDistributionsforCopulas(mc_matrix , output_matrix)
 # x's size is same get transpose mc_matrix's size. We are expecting it. x size --> (wave length number ,  drawNumber)
 x = drawMultiVariate(Distributions , corrMatrix , drawNumber)
+spectralcorrelation(getTranspose(x))
 scatterPlotCopulas(x)
 
 #------------------------
