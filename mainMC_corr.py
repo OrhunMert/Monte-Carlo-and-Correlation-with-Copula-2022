@@ -5,11 +5,21 @@ import matplotlib.pyplot as plt
 import xlsxwriter
 import seaborn as sns
 
-drawNumber = 1000 # Iteration Number
+drawNumber = 100 # Iteration Number
 
-input_FileName = "input.xlsx" # It has to be excel file.
+#input_FileName = "makaleDegerleri input.xlsx"
+#input_FileName = "Tayfsal Responsivity input.xlsx" # It has to be excel file.
+input_FileName = "flux input.xlsx"
+modelFunctionName = "flux"
 data_SheetName = "Data"
 distributions_SheetName = "Distributions"
+
+"""
+There are three options now. 
+modelFunctionName = "flux" or modelFunctionName = "tayfsal" or modelFunctionName = "article"
+
+"""
+
 
 def ReadFile(FileName):
     
@@ -116,16 +126,16 @@ def drawValues(Mean , Stddev , Draws = 1000 , DoF = 1 , Type = "normal"):
         for i in range (len(Mean)):
             
             if Type == "normal":
-                result[i]= stats.norm.rvs (loc=Mean[i], scale=abs(Stddev[i]), size=Draws)
+                result[i]= stats.norm.rvs (loc=Mean[i], scale=Stddev[i], size=Draws)
             
             if Type == "T":
-                result[i]= stats.t.rvs (loc=Mean[i] , scale=abs(Stddev[i]), df=DoF, size= Draws) 
+                result[i]= stats.t.rvs (loc=Mean[i] , scale=Stddev[i], df=DoF, size= Draws) 
             
             if Type == "uniform":
                 result[i]= np.random.uniform (low=Mean[i], high=Stddev[i], size=Draws)
             
             if Type == "triangle":
-                result[i]=stats.triang.rvs(loc=Mean[i], scale=abs(Stddev[i]), c=DoF, size=Draws)
+                result[i]=stats.triang.rvs(loc=Mean[i], scale=Stddev[i], c=DoF, size=Draws)
         
         return (result)
     
@@ -231,10 +241,12 @@ def calculateMeanStdMC(matrix_Values , matrix_Distr , Data_Number , WaveLength_N
     """
     
     result_list = [] # We use the DrawValues function to hold the returns. and we send to calculateOutputwithFormulMC function.
-     
+    
     mean_matrix   = [[0 for j in range(Data_Number)] for i in range(WaveLength_Number)]
     std_matrix    = [[0 for j in range(Data_Number)] for i in range(WaveLength_Number)]
-  
+    
+    isDefine_output = False
+    
     for i in range(0,Data_Number*2,2): # matrix_Values's row number equals Data_Number*2 
         
         data_count = int(((i+1)/2)+1)
@@ -244,20 +256,27 @@ def calculateMeanStdMC(matrix_Values , matrix_Distr , Data_Number , WaveLength_N
         #is it fixed value or isn't ?
         if check_mean & check_std == False:
             
+            
             result = drawValues(matrix_Values[i] , matrix_Values[i+1] , drawNumber , DoF = 1 , Type = matrix_Distr[data_count-1])
             result_list.append(result)
             
             for j in range(0,WaveLength_Number):
             
                 output = sumMC(result[j] , Coverage = 0.95 , printOutput= False)
-            
+                
                 mean_matrix[j][data_count-1] = output[0][0]
                 std_matrix[j][data_count-1] = output[0][1]
-                
-        elif check_mean & check_std == True:
             
+            isDefine_output = True
+            
+        elif check_mean & check_std == True:
+           
+            if isDefine_output == False:
+                output = [[matrix_Values[i,0],matrix_Values[i+1,0]],[0,0]]
+           
             result = drawValues(matrix_Values[i,0] , matrix_Values[i+1,0] , drawNumber, DoF = 1 , Type = matrix_Distr[data_count-1])
-            temp=[]
+           
+            temp = []
             
             for k in range(WaveLength_Number):
                 temp.append(result)
@@ -265,17 +284,19 @@ def calculateMeanStdMC(matrix_Values , matrix_Distr , Data_Number , WaveLength_N
             temp_np=np.array(temp)
             result_list.append(temp_np)
             
+           
+            
         # We calculated mean and standart dev. of draws(Iteration Number) for each wave length
             for j in range(0,WaveLength_Number):
-                
+            
                 mean_matrix[j][data_count-1] = np.full_like(output[0][0] , matrix_Values[i,0])
-                std_matrix[j][data_count-1] = np.full_like(output[0][1] , matrix_Values[i+1,0])
+                std_matrix[j][data_count-1] = np.full_like(output[0][0] , matrix_Values[i+1,0])
     
     
     return result_list , mean_matrix , std_matrix
 
 #output1
-def calculateOutputwithFormulaMC(result_list , Data_Number , WaveLength_Number):
+def calculateOutputwithFormulaMC(result_list , Data_Number , WaveLength_Number , modelFunctionName):
     
     """
    English:
@@ -353,11 +374,11 @@ def calculateOutputwithFormulaMC(result_list , Data_Number , WaveLength_Number):
                 draw_matrix[i][j] = temp_result[k][i] 
         
         # The created draw_matrix is sent to the formula and the formula is written in its place with the necessary indexes, the result is calculated and thrown into the output_matrix.                       
-        output_matrix[k][0] , output_matrix[k][1] , mc_Values[:,k] = formula(draw_matrix) 
+        output_matrix[k][0] , output_matrix[k][1] , mc_Values[:,k] = formula(draw_matrix , modelFunctionName) 
         
     return output_matrix , mc_Values
 
-def formula(draw_matrix):
+def formula(draw_matrix , modelFunctionName):
     
     """
     English:
@@ -393,9 +414,29 @@ def formula(draw_matrix):
     for i in range(0,len(draw_matrix)):
         
         # if your data number is not equal to 13, it will calculate 0 for the output1 result. You should define a formula with an if condition for your data set.
-        if len(draw_matrix[0]) == 13: # data number --> 13 
+        if  len(draw_matrix[0]) == 13  and modelFunctionName == "flux": # data number --> 13 
         
             formula = (draw_matrix[i][0]+draw_matrix[i][1])*(draw_matrix[i][2]/draw_matrix[i][3])*(draw_matrix[i][4]/draw_matrix[i][5])*(1+draw_matrix[i][6]+draw_matrix[i][7]+draw_matrix[i][8]+draw_matrix[i][9]+draw_matrix[i][10]+draw_matrix[i][11]+draw_matrix[i][12]) 
+        
+        elif len(draw_matrix[0]) == 13 and modelFunctionName == "tayfsal":
+            
+            print("\n"+str(i)+"\narticle\n")
+            print("draw_matrix:\n"+str(draw_matrix[i]))
+            
+            first_Transaction  = (draw_matrix[i][0]+draw_matrix[i][5]+draw_matrix[i][6]+draw_matrix[i][7]+draw_matrix[i][8]+draw_matrix[i][9]+draw_matrix[i][10]+draw_matrix[i][11]+draw_matrix[i][12])/draw_matrix[i][2]
+            second_Transaction = (draw_matrix[i][1]+draw_matrix[i][5]+draw_matrix[i][6]+draw_matrix[i][7]+draw_matrix[i][8]+draw_matrix[i][9]+draw_matrix[i][10]+draw_matrix[i][11]+draw_matrix[i][12])/draw_matrix[i][3]
+            formula = (first_Transaction/second_Transaction)*draw_matrix[i][4]
+            
+            print("\nformula:\n"+str(formula))
+            
+        elif len(draw_matrix[0]) == 12 and modelFunctionName == "article":
+            print("\n"+str(i)+"\narticle\n")
+            print("draw_matrix:\n"+str(draw_matrix[i]))
+            
+            
+            formula = (draw_matrix[i][0]/draw_matrix[i][1])*draw_matrix[i][2]*draw_matrix[i][3]*draw_matrix[i][4]*draw_matrix[i][5]*draw_matrix[i][6]*draw_matrix[i][7]*draw_matrix[i][8]*draw_matrix[i][9]*draw_matrix[i][10]*draw_matrix[i][11]
+            
+            print("\nformula:\n"+str(formula))
             
         output_list.append(formula)  
         
@@ -403,7 +444,7 @@ def formula(draw_matrix):
     # to access correlations the monte carlo results, without calculation of mean and standarddev has to be preserved
     return np.mean(output_list) , np.std(output_list) , output_list
 
-def writeExcel(output_matrix , mean_matrix , std_matrix , Data_Number , WaveLength_Number , matrix_WaveLengths):
+def writeExcel(output_matrix , mean_matrix , std_matrix , Data_Number , WaveLength_Number , matrix_WaveLengths , modelFunctionName):
 
     """
     
@@ -423,7 +464,7 @@ def writeExcel(output_matrix , mean_matrix , std_matrix , Data_Number , WaveLeng
     
     """
     
-    workbook = xlsxwriter.Workbook("output_"+str(drawNumber)+".xlsx") 
+    workbook = xlsxwriter.Workbook(modelFunctionName+"output_"+str(drawNumber)+".xlsx") 
     worksheet_formul_output = workbook.add_worksheet("output1")
     worksheet_mean_std_output = workbook.add_worksheet("output2")
    
@@ -542,7 +583,7 @@ def resultplot(matrix_WaveLengths , output_matrix):
     ax.set_xlabel("wavelength / nm")
     ax.set_ylabel("E")
     ax2 = ax.twinx()
-    ax2.plot(matrix_WaveLengths, outputvector[:, 1]/outputvector[:, 0],
+    ax2.plot(matrix_WaveLengths, 100*(outputvector[:, 1]/outputvector[:, 0]),
          linestyle="None", marker="o", color="red")
     ax2.set_ylabel("u_rel(E)")
     #ax2.set_yscale("log")
@@ -623,7 +664,7 @@ def scatterPlotCopulas(x):
     plt.ylabel('Wave Length - value')
     plt.show()
  
-def mainMC(drawNum,FileName):
+def mainMC(drawNum , FileName , modelFunctionName):
     
     """
     English:
@@ -658,29 +699,53 @@ def mainMC(drawNum,FileName):
     
     else :
         print("row Number has to be even !!!")
-   
+    
     #output2
     result_list , mean_matrix , std_matrix = calculateMeanStdMC(matrix_Values , matrix_Distr , Data_Number, WaveLength_Number)  
     #output1
-    output_matrix, mc_matrix = calculateOutputwithFormulaMC(result_list , Data_Number, WaveLength_Number)
+    output_matrix, mc_matrix = calculateOutputwithFormulaMC(result_list , Data_Number, WaveLength_Number , modelFunctionName)
     
     print("\nMonte Carlo is finished\n")
     
-    writeExcel(output_matrix , mean_matrix, std_matrix , Data_Number , WaveLength_Number, matrix_WaveLengths) 
+    writeExcel(output_matrix , mean_matrix, std_matrix , Data_Number , WaveLength_Number, matrix_WaveLengths , modelFunctionName) 
     
     return output_matrix , mean_matrix , std_matrix, mc_matrix, matrix_WaveLengths
 
+def silinecek1(mc_matrix):
+    
+    wb = xlsxwriter.Workbook(str(drawNumber)+"mcResult_"+modelFunctionName+".xlsx")
+    worksheet_mc = wb.add_worksheet("output")
+
+    print(len(mc_matrix))
+    worksheet_mc.write(0,0,"WL")
+
+    for i in range(len(mc_matrix[0])):# wave_length number
+        worksheet_mc.write(i+1,0,matrix_WaveLengths[i])
+        for j in range(len(mc_matrix)):
+        
+            worksheet_mc.write(i+1,j+1,mc_matrix[j][i])
+            worksheet_mc.write(0,j+1,j+1)
+
+    
+    wb.close()
+
 # ------- running ------- 
 
-output_matrix , mean_matrix , std_matrix , mc_matrix , matrix_WaveLengths  = mainMC(drawNumber , input_FileName)
+output_matrix , mean_matrix , std_matrix , mc_matrix , matrix_WaveLengths  = mainMC(drawNumber , input_FileName , modelFunctionName)
 corrMatrix = spectralcorrelation(mc_matrix)
 resultplot(matrix_WaveLengths , output_matrix)
 
+silinecek1(mc_matrix)
+
+
+
+"""
 Distributions = createDistributionsforCopulas(mc_matrix , output_matrix)
 # x's size is same get transpose mc_matrix's size. We are expecting it. x size --> (wave length number ,  drawNumber)
 x = drawMultiVariate(Distributions , corrMatrix , drawNumber)
 spectralcorrelation(getTranspose(x))
 scatterPlotCopulas(x)
+"""
 
 #------------------------
 
