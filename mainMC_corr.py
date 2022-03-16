@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 import xlsxwriter
 import seaborn as sns
 
-drawNumber = 100 # Iteration Number
+drawNumber = 1000
+ # Iteration Number
 
 #input_FileName = "makaleDegerleri input.xlsx"
 #input_FileName = "Tayfsal Responsivity input.xlsx" # It has to be excel file.
@@ -17,7 +18,6 @@ distributions_SheetName = "Distributions"
 """
 There are three options now. 
 modelFunctionName = "flux" or modelFunctionName = "tayfsal" or modelFunctionName = "article"
-
 """
 
 
@@ -126,16 +126,16 @@ def drawValues(Mean , Stddev , Draws = 1000 , DoF = 1 , Type = "normal"):
         for i in range (len(Mean)):
             
             if Type == "normal":
-                result[i]= stats.norm.rvs (loc=Mean[i], scale=Stddev[i], size=Draws)
+                result[i]= stats.norm.rvs (loc=Mean[i], scale=abs(Stddev[i]), size=Draws)
             
             if Type == "T":
-                result[i]= stats.t.rvs (loc=Mean[i] , scale=Stddev[i], df=DoF, size= Draws) 
+                result[i]= stats.t.rvs (loc=Mean[i] , scale=abs(Stddev[i]), df=DoF, size= Draws) 
             
             if Type == "uniform":
-                result[i]= np.random.uniform (low=Mean[i], high=Stddev[i], size=Draws)
+                result[i]= np.random.uniform (low=Mean[i], high=abs(Stddev[i]), size=Draws)
             
             if Type == "triangle":
-                result[i]=stats.triang.rvs(loc=Mean[i], scale=Stddev[i], c=DoF, size=Draws)
+                result[i]=stats.triang.rvs(loc=Mean[i], scale=abs(Stddev[i]), c=DoF, size=Draws)
         
         return (result)
     
@@ -256,7 +256,6 @@ def calculateMeanStdMC(matrix_Values , matrix_Distr , Data_Number , WaveLength_N
         #is it fixed value or isn't ?
         if check_mean & check_std == False:
             
-            
             result = drawValues(matrix_Values[i] , matrix_Values[i+1] , drawNumber , DoF = 1 , Type = matrix_Distr[data_count-1])
             result_list.append(result)
             
@@ -283,9 +282,7 @@ def calculateMeanStdMC(matrix_Values , matrix_Distr , Data_Number , WaveLength_N
             
             temp_np=np.array(temp)
             result_list.append(temp_np)
-            
-           
-            
+              
         # We calculated mean and standart dev. of draws(Iteration Number) for each wave length
             for j in range(0,WaveLength_Number):
             
@@ -415,28 +412,18 @@ def formula(draw_matrix , modelFunctionName):
         
         # if your data number is not equal to 13, it will calculate 0 for the output1 result. You should define a formula with an if condition for your data set.
         if  len(draw_matrix[0]) == 13  and modelFunctionName == "flux": # data number --> 13 
-        
-            formula = (draw_matrix[i][0]+draw_matrix[i][1])*(draw_matrix[i][2]/draw_matrix[i][3])*(draw_matrix[i][4]/draw_matrix[i][5])*(1+draw_matrix[i][6]+draw_matrix[i][7]+draw_matrix[i][8]+draw_matrix[i][9]+draw_matrix[i][10]+draw_matrix[i][11]+draw_matrix[i][12]) 
-        
-        elif len(draw_matrix[0]) == 13 and modelFunctionName == "tayfsal":
             
-            print("\n"+str(i)+"\narticle\n")
-            print("draw_matrix:\n"+str(draw_matrix[i]))
+            formula = (draw_matrix[i][0]+draw_matrix[i][1])*(draw_matrix[i][2]/draw_matrix[i][3])*(draw_matrix[i][4]/draw_matrix[i][5])*(1+draw_matrix[i][6]+draw_matrix[i][7]+draw_matrix[i][8]+draw_matrix[i][9]+draw_matrix[i][10]+draw_matrix[i][11]+draw_matrix[i][12]) 
+            
+        elif len(draw_matrix[0]) == 13 and modelFunctionName == "tayfsal":
             
             first_Transaction  = (draw_matrix[i][0]+draw_matrix[i][5]+draw_matrix[i][6]+draw_matrix[i][7]+draw_matrix[i][8]+draw_matrix[i][9]+draw_matrix[i][10]+draw_matrix[i][11]+draw_matrix[i][12])/draw_matrix[i][2]
             second_Transaction = (draw_matrix[i][1]+draw_matrix[i][5]+draw_matrix[i][6]+draw_matrix[i][7]+draw_matrix[i][8]+draw_matrix[i][9]+draw_matrix[i][10]+draw_matrix[i][11]+draw_matrix[i][12])/draw_matrix[i][3]
             formula = (first_Transaction/second_Transaction)*draw_matrix[i][4]
             
-            print("\nformula:\n"+str(formula))
-            
         elif len(draw_matrix[0]) == 12 and modelFunctionName == "article":
-            print("\n"+str(i)+"\narticle\n")
-            print("draw_matrix:\n"+str(draw_matrix[i]))
-            
             
             formula = (draw_matrix[i][0]/draw_matrix[i][1])*draw_matrix[i][2]*draw_matrix[i][3]*draw_matrix[i][4]*draw_matrix[i][5]*draw_matrix[i][6]*draw_matrix[i][7]*draw_matrix[i][8]*draw_matrix[i][9]*draw_matrix[i][10]*draw_matrix[i][11]
-            
-            print("\nformula:\n"+str(formula))
             
         output_list.append(formula)  
         
@@ -546,7 +533,6 @@ def spectralcorrelation(mc_matrix):
     Parameters
     ----------
     mc_matrix : Monte carlo values required for calculation of the correlation of the result data.
-
     Returns
     -------
     None.
@@ -564,16 +550,13 @@ def resultplot(matrix_WaveLengths , output_matrix):
     """
     --> Function to plot the spectral output values and the relative standard deviation as a function of wavelength
     
-
     Parameters
     ----------
     matrix_WaveLengths : wavelength vector provided for x-axis
     output_matrix : matrix with mean values and std for plotting the data
-
     Returns
     -------
     None.
-
     """
     
     outputvector=np.array(output_matrix)
@@ -748,10 +731,3 @@ scatterPlotCopulas(x)
 """
 
 #------------------------
-
-
-
-
-
-
-
