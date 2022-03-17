@@ -5,8 +5,7 @@ import matplotlib.pyplot as plt
 import xlsxwriter
 import seaborn as sns
 
-drawNumber = 1000
- # Iteration Number
+drawNumber = 1000# Iteration Number
 
 #input_FileName = "makaleDegerleri input.xlsx"
 #input_FileName = "Tayfsal Responsivity input.xlsx" # It has to be excel file.
@@ -18,6 +17,7 @@ distributions_SheetName = "Distributions"
 """
 There are three options now. 
 modelFunctionName = "flux" or modelFunctionName = "tayfsal" or modelFunctionName = "article"
+
 """
 
 
@@ -258,9 +258,11 @@ def calculateMeanStdMC(matrix_Values , matrix_Distr , Data_Number , WaveLength_N
             
             result = drawValues(matrix_Values[i] , matrix_Values[i+1] , drawNumber , DoF = 1 , Type = matrix_Distr[data_count-1])
             result_list.append(result)
+            # len(result) = WaveLength_Number len(result[0]) = drawNumber
             
             for j in range(0,WaveLength_Number):
             
+                
                 output = sumMC(result[j] , Coverage = 0.95 , printOutput= False)
                 
                 mean_matrix[j][data_count-1] = output[0][0]
@@ -275,20 +277,23 @@ def calculateMeanStdMC(matrix_Values , matrix_Distr , Data_Number , WaveLength_N
            
             result = drawValues(matrix_Values[i,0] , matrix_Values[i+1,0] , drawNumber, DoF = 1 , Type = matrix_Distr[data_count-1])
            
+            #len(result) --> drawNumber 
+            
             temp = []
             
             for k in range(WaveLength_Number):
                 temp.append(result)
+                
             
             temp_np=np.array(temp)
+            
             result_list.append(temp_np)
               
-        # We calculated mean and standart dev. of draws(Iteration Number) for each wave length
+            # We calculated mean and standart dev. of draws(Iteration Number) for each wave length
             for j in range(0,WaveLength_Number):
             
                 mean_matrix[j][data_count-1] = np.full_like(output[0][0] , matrix_Values[i,0])
                 std_matrix[j][data_count-1] = np.full_like(output[0][0] , matrix_Values[i+1,0])
-    
     
     return result_list , mean_matrix , std_matrix
 
@@ -424,6 +429,7 @@ def formula(draw_matrix , modelFunctionName):
         elif len(draw_matrix[0]) == 12 and modelFunctionName == "article":
             
             formula = (draw_matrix[i][0]/draw_matrix[i][1])*draw_matrix[i][2]*draw_matrix[i][3]*draw_matrix[i][4]*draw_matrix[i][5]*draw_matrix[i][6]*draw_matrix[i][7]*draw_matrix[i][8]*draw_matrix[i][9]*draw_matrix[i][10]*draw_matrix[i][11]
+            
             
         output_list.append(formula)  
         
@@ -572,29 +578,6 @@ def resultplot(matrix_WaveLengths , output_matrix):
     #ax2.set_yscale("log")
     plt.show()    
 
-def createDistributionsforCopulas(mc_matrix , output_matrix):
-    
-    """
-    mc_matrix.size --> (drawNumber , WaveLength_Number)
-    We need to "getTranspose"
-    
-    """
-    
-    Distributions = []
-    transpose_mcMatrix = getTranspose(mc_matrix)
-    
-    # we are creating Distributions for each Wave Length to calculate copulas. e.g: [[mean , std ,'n'] , [mean , std , 'u] . . .]
-    # what is the 'n' and 'u' ? if they are a Distributions shortcuts, you need to a string variable with if conditional.
-    for i in range(0,len(transpose_mcMatrix)):
-        
-        temp_list = []
-        temp_list = [np.mean(transpose_mcMatrix[i])  , np.std(transpose_mcMatrix[i]) , 'n']
-        Distributions.append(temp_list)
-        
-    
-    return Distributions
-    
-
 def drawMultiVariate(Distributions , Correlationmatrix , Draws=1000):
          
         """
@@ -622,7 +605,7 @@ def drawMultiVariate(Distributions , Correlationmatrix , Draws=1000):
         x=np.zeros(shape=(dimension,Draws))
         
         for i in range (dimension):
-            
+    
             xi= stats.norm.cdf(z[:,i])
             
             if Distributions [i][2]=="n":
@@ -637,16 +620,6 @@ def drawMultiVariate(Distributions , Correlationmatrix , Draws=1000):
         
         return(x)
 
-
-def scatterPlotCopulas(x):
-    
-    # we are looking two between wave length.
-    plt.scatter(x[100] , x[200] , drawNumber , color= "blue" , alpha = 0.7)
-    plt.title('copula')
-    plt.xlabel('Wave Length - value')
-    plt.ylabel('Wave Length - value')
-    plt.show()
- 
 def mainMC(drawNum , FileName , modelFunctionName):
     
     """
@@ -684,7 +657,8 @@ def mainMC(drawNum , FileName , modelFunctionName):
         print("row Number has to be even !!!")
     
     #output2
-    result_list , mean_matrix , std_matrix = calculateMeanStdMC(matrix_Values , matrix_Distr , Data_Number, WaveLength_Number)  
+    result_list , mean_matrix , std_matrix = calculateMeanStdMC(matrix_Values , matrix_Distr , Data_Number, WaveLength_Number)
+        
     #output1
     output_matrix, mc_matrix = calculateOutputwithFormulaMC(result_list , Data_Number, WaveLength_Number , modelFunctionName)
     
@@ -692,42 +666,59 @@ def mainMC(drawNum , FileName , modelFunctionName):
     
     writeExcel(output_matrix , mean_matrix, std_matrix , Data_Number , WaveLength_Number, matrix_WaveLengths , modelFunctionName) 
     
-    return output_matrix , mean_matrix , std_matrix, mc_matrix, matrix_WaveLengths
+    return output_matrix , mean_matrix , std_matrix, mc_matrix, matrix_WaveLengths, result_list
 
-def silinecek1(mc_matrix):
-    
-    wb = xlsxwriter.Workbook(str(drawNumber)+"mcResult_"+modelFunctionName+".xlsx")
-    worksheet_mc = wb.add_worksheet("output")
 
-    print(len(mc_matrix))
-    worksheet_mc.write(0,0,"WL")
-
-    for i in range(len(mc_matrix[0])):# wave_length number
-        worksheet_mc.write(i+1,0,matrix_WaveLengths[i])
-        for j in range(len(mc_matrix)):
-        
-            worksheet_mc.write(i+1,j+1,mc_matrix[j][i])
-            worksheet_mc.write(0,j+1,j+1)
-
-    
-    wb.close()
 
 # ------- running ------- 
 
-output_matrix , mean_matrix , std_matrix , mc_matrix , matrix_WaveLengths  = mainMC(drawNumber , input_FileName , modelFunctionName)
+output_matrix , mean_matrix , std_matrix , mc_matrix , matrix_WaveLengths , result_list  = mainMC(drawNumber , input_FileName , modelFunctionName)
 corrMatrix = spectralcorrelation(mc_matrix)
 resultplot(matrix_WaveLengths , output_matrix)
 
-silinecek1(mc_matrix)
-
-
-
 """
-Distributions = createDistributionsforCopulas(mc_matrix , output_matrix)
-# x's size is same get transpose mc_matrix's size. We are expecting it. x size --> (wave length number ,  drawNumber)
-x = drawMultiVariate(Distributions , corrMatrix , drawNumber)
-spectralcorrelation(getTranspose(x))
-scatterPlotCopulas(x)
+#-------copulas-------
+copulaMatrix = [[0 for j in range(len(mean_matrix))] for i in range(2)]
+resultcopulaMatrix = [[0 for j in range(drawNumber)] for i in range(len(mean_matrix))]
+
+Distribution_List = []
+
+for i in range(0,2):
+    for j in range(0, len(mean_matrix)):
+        copulaMatrix[i][j] = mean_matrix[j][i]
+
+copulaMatrix = getTranspose(np.array(copulaMatrix))
+toCopulaCorrMatrix = np.corrcoef(getTranspose(copulaMatrix)) # 2x2 matrix
+
+#print("copula matrix:\n"+str(copulaMatrix)) 
+#print("correlation matrix:\n"+str(toCopulaCorrMatrix))       
+# bu dağılımlar normalde matrix_Distr den alınacak.
+for i in range(0,len(mean_matrix)):
+    #print("\n"+str(i)+".wave length\n")
+    temp_Distribution = [[copulaMatrix[i][0],std_matrix[i][0] ,"n"],[copulaMatrix[i][1],std_matrix[i][1],"n"]]
+    #print("temp Distr:\n"+str(temp_Distribution))
+    Distribution_List.append(temp_Distribution)
+    
+for i in range(0,len(Distribution_List)):
+    
+    print("Distribution:\n"+str(Distribution_List[i]))
+    print("copula matrix:\n"+str(toCopulaCorrMatrix))
+    
+    
+    resultcopulaMatrix[i] = drawMultiVariate(Distribution_List[i], toCopulaCorrMatrix)
+    
+
+
+
+print("\ncopula matrix:\n"+str(resultcopulaMatrix)) 
+
+print("\ncopula_matrix a row:\n"+str(resultcopulaMatrix[0]))
+
+#print(np.corrcoef(getTranspose(np.array(resultcopulaMatrix))))
+
+
+  
+#---------------------    
 """
 
 #------------------------
